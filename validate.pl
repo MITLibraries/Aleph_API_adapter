@@ -91,13 +91,13 @@ if (grep /aleph/i, @aleph_info) {
 	print "\nAleph version retrieval status:\n\t[OK]\n";
 	}
 else {
-	print "Aleph version retrieval status:\n\t[failed]\n";
+	print "\nAleph version retrieval status:\n\t[failed]\n";
 	}
 
 #------------------------------------------------
 # Generate a URL for testing the installation.
 #------------------------------------------------
-die '$ENV{WWW_HOST} not defined.'
+die "\n".'$ENV{WWW_HOST} not defined.'
     unless (defined($ENV{WWW_HOST})
             and $ENV{WWW_HOST} !~ /^\s*$/);
 my $test_url = "https://$ENV{WWW_HOST}/rest-dlf/patron/$aleph_id/patronInformation/address";
