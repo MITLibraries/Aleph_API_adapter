@@ -1,0 +1,9 @@
+# Vim temp files.
+.*.swp
+
+# Output files
+api_adapter.cgi
+get_aleph_info.csh
+sql_lookup.cgi
+sql_lookup.csh
+sql_lookup.txt
