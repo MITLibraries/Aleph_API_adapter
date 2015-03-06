@@ -151,7 +151,7 @@ if (!$xsl) {
 # Validate the installation
 #----------------------------
 print "Validating the installation\n";
-my @messages = `validate.pl $aleph_id $jboss_port`;
+my @messages = `./validate.pl $aleph_id $jboss_port`;
 foreach (@messages) { print }
 exit;
 
