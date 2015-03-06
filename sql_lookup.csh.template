@@ -2,3 +2,5 @@
 source /exlibris/aleph/VER/alephm/.cshrc >/dev/null
 set parm1 = $1
 perl sql_lookup.cgi $parm1
+
+# vim:textwidth=80:expandtab:tabstop=4:shiftwidth=4:fileencodings=utf8:spelllang=en

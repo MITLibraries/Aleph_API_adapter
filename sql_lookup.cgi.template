@@ -9,11 +9,11 @@ my $aleph_id;
 my $debug = 0;
 my $patron_id = uc $ARGV[0];
 if (!$patron_id) {
-	print "NULL";
-	exit;
-	}
+    print "NULL";
+    exit;
+}
 #--------------------------
-#      Set variables 
+#      Set variables
 #--------------------------
 my $db_user = 'DBUSER';
 my $db_password = 'DBPASSWORD';
@@ -25,15 +25,15 @@ my $oracle_sid = $ENV{'ORACLE_SID'};
 #       Open connection to Oracle
 #-------------------------------------
 my $dbh = DBI->connect ("dbi:Oracle:host=$oracle_host;sid=$oracle_sid", $db_user, $db_password,
-                       {RaiseError=> 1, AutoCommit=> 0 }) or warn "Unable to connect: $DBI::errstr";
+                        {RaiseError=> 1, AutoCommit=> 0 }) or warn "Unable to connect: $DBI::errstr";
 
 #---------------------------------------------
-#      Prepare and execute SQL statement 
+#      Prepare and execute SQL statement
 #---------------------------------------------
 my $search_term = join '', $z308_prefix, $patron_id, '%';
-my @sqlsearch = qq{ select  /*+ DYNAMIC_SAMPLING(2) ALL_ROWS */ /*+ ordered */ z308_id
-                    from z308
-                    where z308_rec_key like \'$search_term\' };
+my @sqlsearch = qq{ SELECT /*+ DYNAMIC_SAMPLING(2) ALL_ROWS */ /*+ ordered */  z308_id
+                    FROM z308
+                    WHERE z308_rec_key LIKE \'$search_term\' };
 print STDERR "@sqlsearch\n" if $debug;
 my $sth = $dbh->prepare(@sqlsearch);
 $sth->execute or warn "SQL execution failure: $DBI::errstr";
@@ -48,3 +48,5 @@ print "$aleph_id";
 #       Disconnect from Oracle
 #-------------------------------------
 $dbh->disconnect;
+
+# vim:textwidth=80:expandtab:tabstop=4:shiftwidth=4:fileencodings=utf8:spelllang=en
