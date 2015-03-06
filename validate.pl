@@ -54,7 +54,7 @@ my $operation = 'find-doc&doc_number=';
 my $x_url = "http://localhost/X?op=bor_by_key&bor_id=$aleph_id";
 print "Sending $x_url\n"; 
 my $response = $ua->get($x_url);
-if (grep /<error>/, $response->content) {
+if (not $response->is_success or grep /<error>/, $response->content) {
 	print "X-server retrieval status:\n\t[failed]\n";
 	}
 else {
