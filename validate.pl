@@ -97,6 +97,9 @@ else {
 #------------------------------------------------
 # Generate a URL for testing the installation.
 #------------------------------------------------
+die '$ENV{WWW_HOST} not defined.'
+    unless (defined($ENV{WWW_HOST})
+            and $ENV{WWW_HOST} !~ /^\s*$/);
 my $test_url = "https://$ENV{WWW_HOST}/rest-dlf/patron/$aleph_id/patronInformation/address";
 print "\nPut this URL in a browser to test the adapter after all the installation steps are completed.\n\t$test_url\n\n";
 exit;
