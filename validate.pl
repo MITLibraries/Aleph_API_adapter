@@ -9,6 +9,14 @@ my %perl_modules;
 my $aleph_id 	    = $ARGV[0];
 my $jboss_port 	    = $ARGV[1];
 
+die 'No correct Aleph ID was specified.'
+    unless (defined($aleph_id)
+            and $aleph_id =~ /^\S{1,12}$/);
+die 'No correct JBoss port was specified.'
+    unless (defined($jboss_port)
+            and $jboss_port =~ /^\d+$/
+            and $jboss_port > 0 and $jboss_port < 65536);
+
 BEGIN {
 	#------------------------------------------------
 	# Read the file created by install_adapter.pl.
