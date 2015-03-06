@@ -5,17 +5,17 @@ use warnings;
 
 use Fcntl qw( :mode );
 
-my $input_file1  = 'get_aleph_info.template';
-my $output_file1 = 'get_aleph_info.csh';
+my $get_aleph_info_template_file = 'get_aleph_info.template';
+my $get_aleph_info_file          = 'get_aleph_info.csh';
 
-my $input_file2  = 'api_adapter.template';
-my $output_file2 = 'api_adapter.cgi';
+my $api_adapter_template_file    = 'api_adapter.template';
+my $api_adapter_file             = 'api_adapter.cgi';
 
-my $input_file3  = 'sql_lookup.csh.template';
-my $output_file3 = 'sql_lookup.csh';
+my $sql_lookup_template_file     = 'sql_lookup.csh.template';
+my $sql_lookup_file              = 'sql_lookup.csh';
 
-my $input_file4  = 'sql_lookup.cgi.template';
-my $output_file4 = 'sql_lookup.cgi';
+my $sql_lookup_cgi_template_file = 'sql_lookup.cgi.template';
+my $sql_lookup_cgi_file          = 'sql_lookup.cgi';
 
 #-------------------------------------------
 # Extract the version token from the path
@@ -89,8 +89,8 @@ $ip_string = join ',', @ip_addresses;
 # Generate the get_aleph_info.csh script from a template.
 # Substitute the version token into the path of the 'source' command.
 #----------------------------------------------------------------------
-open(FH1,"<$input_file1")  or die "Unable to open input file $input_file1\n";
-open(FH2,">$output_file1") or die "Unable to open output file $output_file1\n";
+open(FH1,"<$get_aleph_info_template_file")  or die "Unable to open input file $get_aleph_info_template_file\n";
+open(FH2,">$get_aleph_info_file") or die "Unable to open output file $get_aleph_info_file\n";
 while (<FH1>) {
     if (grep /source/, $_) {
             $_ =~ s/VER/$ver/g;
@@ -99,14 +99,14 @@ while (<FH1>) {
 }
 close(FH1);
 close(FH2);
-chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${output_file1}");
+chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${get_aleph_info_file}");
 
 #----------------------------------------------------------
 # Generate the api_adapter.cgi script from a template.
 # Substitute the IP addresses into the whitelist.
 #----------------------------------------------------------
-open(FH1,"<$input_file2")  or die "Unable to open input file $input_file2\n";
-open(FH2,">$output_file2") or die "Unable to open output file $output_file2\n";
+open(FH1,"<$api_adapter_template_file")  or die "Unable to open input file $api_adapter_template_file\n";
+open(FH2,">$api_adapter_file") or die "Unable to open output file $api_adapter_file\n";
 while (<FH1>) {
     if (grep /WHITELIST/, $_) { $_ =~ s/WHITELIST/$ip_string/g }
     if (grep /PORT/, $_) { $_ =~ s/PORT/$jboss_port/og }
@@ -115,7 +115,7 @@ while (<FH1>) {
 }
 close(FH1);
 close(FH2);
-chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${output_file2}");
+chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${api_adapter_file}");
 
 #---------------------------------------------------------------
 # Optionally, generate the SQL lookup scripts from templates.
@@ -125,21 +125,21 @@ if (!$xsl) {
     # Generate the sql_lookup.csh script from a template.
     # Substitute the version token into the path of the 'source' command.
     #----------------------------------------------------------------------------
-    open(FH1,"<$input_file3")  or die "Unable to open input file $input_file3\n";
-    open(FH2,">$output_file3") or die "Unable to open output file $output_file3\n";
+    open(FH1,"<$sql_lookup_template_file")  or die "Unable to open input file $sql_lookup_template_file\n";
+    open(FH2,">$sql_lookup_file") or die "Unable to open output file $sql_lookup_file\n";
     while (<FH1>) {
         if (grep /VER/, $_) { $_ =~ s/VER/$ver/g }
     }
     close(FH1);
     close(FH2);
-    chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${output_file3}");
+    chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${sql_lookup_file}");
 
     #---------------------------------------------------------
     # Generate the sql_lookup.cgi script from a template.
     # Substitute Oracle user id and password, Z308 prefix.
     #---------------------------------------------------------
-    open(FH1,"<$input_file4")  or die "Unable to open input file $input_file4\n";
-    open(FH2,">$output_file4") or die "Unable to open output file $output_file4\n";
+    open(FH1,"<$sql_lookup_cgi_template_file")  or die "Unable to open input file $sql_lookup_cgi_template_file\n";
+    open(FH2,">$sql_lookup_cgi_file") or die "Unable to open output file $sql_lookup_cgi_file\n";
     while (<FH1>) {
         if (grep /DBUSER/, $_)     { $_ =~ s/DBUSER/$db_user/g }
         if (grep /DBPASSWORD/, $_) { $_ =~ s/DBPASSWORD/$db_password/g }
@@ -147,7 +147,7 @@ if (!$xsl) {
     }
     close(FH1);
     close(FH2);
-    chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${output_file4}");
+    chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${sql_lookup_cgi_file}");
 }
 
 #----------------------------
