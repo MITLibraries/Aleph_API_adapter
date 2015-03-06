@@ -68,7 +68,7 @@ my $rest_url = "http://localhost:PORT/rest-dlf/patron/$aleph_id/patronInformatio
 $rest_url =~ s/PORT/$jboss_port/g;
 print "\nSending $rest_url\n"; 
 $response = $ua->get($rest_url);
-if (!grep /<reply-code>0000<\/reply-code>/, $response->content) {
+if (not $response->is_success or !grep /<reply-code>0000<\/reply-code>/, $response->content) {
 	print "REST API retrieval status:\n\t[failed]\n";
 	}
 else {
