@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use Fcntl qw( :mode );
+
 my $input_file1  = 'get_aleph_info.template';
 my $output_file1 = 'get_aleph_info.csh';
 
@@ -95,9 +97,9 @@ while (<FH1>) {
     }
     print FH2;
 }
-`chmod +x $output_file1`;
 close(FH1);
 close(FH2);
+chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${output_file1}");
 
 #----------------------------------------------------------
 # Generate the api_adapter.cgi script from a template.
@@ -111,9 +113,9 @@ while (<FH1>) {
     if (grep /INSTNAME/, $_) { $_ =~ s/INSTNAME/$instname/og }
     print FH2;
 }
-`chmod +x $output_file2`;
 close(FH1);
 close(FH2);
+chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${output_file2}");
 
 #---------------------------------------------------------------
 # Optionally, generate the SQL lookup scripts from templates.
@@ -130,6 +132,7 @@ if (!$xsl) {
     }
     close(FH1);
     close(FH2);
+    chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${output_file3}");
 
     #---------------------------------------------------------
     # Generate the sql_lookup.cgi script from a template.
@@ -144,6 +147,7 @@ if (!$xsl) {
     }
     close(FH1);
     close(FH2);
+    chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${output_file4}");
 }
 
 #----------------------------
