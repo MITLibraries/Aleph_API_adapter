@@ -33,14 +33,14 @@ my $dbh = DBI->connect ("dbi:Oracle:host=$oracle_host;sid=$oracle_sid", "$db_use
 #---------------------------------------------
 #   Prepare and execute SQL statement
 #---------------------------------------------
-my $search_term = join('', $z308_prefix, $patron_id);
 my $sqlsearch = qq{ SELECT /*+ DYNAMIC_SAMPLING(2) ALL_ROWS */ /*+ ordered */  z308_id
                     FROM z308
                     WHERE z308_rec_key LIKE ? };
+my $search_term = join('', $z308_prefix, $patron_id, '%');
 
-print STDERR "$sqlsearch\n" if $debug;
+print STDERR "$sqlsearch\nparam1: $search_term\n" if $debug;
 my $sth = $dbh->prepare($sqlsearch);
-$sth->execute($search_term.'%')
+$sth->execute($search_term)
         or warn "SQL execution failure: $DBI::errstr";
 
 #--------------------------------
