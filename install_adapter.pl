@@ -47,9 +47,9 @@ if (grep /y/i, $xsl) {$xsl = 1} else {$xsl = 0}
 #----------------------------------------------------------
 # Store this indicator for later reading by validate.pl.
 #----------------------------------------------------------
-open(FH1,">sql_lookup.txt");
-print FH1 "$xsl\n";
-close(FH1);
+open(OUTPUT,">sql_lookup.txt");
+print OUTPUT "$xsl\n";
+close(OUTPUT);
 
 my $db_user;
 my $db_password;
@@ -93,32 +93,32 @@ $ip_string = join ',', @ip_addresses;
 # Generate the get_aleph_info.csh script from a template.
 # Substitute the version token into the path of the 'source' command.
 #----------------------------------------------------------------------
-open(FH1,"<$get_aleph_info_template_file")  or die "Unable to open input file $get_aleph_info_template_file\n";
-open(FH2,">$get_aleph_info_file") or die "Unable to open output file $get_aleph_info_file\n";
-while (<FH1>) {
+open(TEMPLATE,"<$get_aleph_info_template_file")  or die "Unable to open input file $get_aleph_info_template_file\n";
+open(OUTPUT,">$get_aleph_info_file") or die "Unable to open output file $get_aleph_info_file\n";
+while (<TEMPLATE>) {
     if (grep /source/, $_) {
             $_ =~ s/VER/$ver/g;
     }
-    print FH2;
+    print OUTPUT;
 }
-close(FH1);
-close(FH2);
+close(TEMPLATE);
+close(OUTPUT);
 chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${get_aleph_info_file}");
 
 #----------------------------------------------------------
 # Generate the api_adapter.cgi script from a template.
 # Substitute the IP addresses into the whitelist.
 #----------------------------------------------------------
-open(FH1,"<$api_adapter_template_file")  or die "Unable to open input file $api_adapter_template_file\n";
-open(FH2,">$api_adapter_file") or die "Unable to open output file $api_adapter_file\n";
-while (<FH1>) {
+open(TEMPLATE,"<$api_adapter_template_file")  or die "Unable to open input file $api_adapter_template_file\n";
+open(OUTPUT,">$api_adapter_file") or die "Unable to open output file $api_adapter_file\n";
+while (<TEMPLATE>) {
     if (grep /WHITELIST/, $_) { $_ =~ s/WHITELIST/$ip_string/g }
     if (grep /PORT/, $_) { $_ =~ s/PORT/$jboss_port/og }
     if (grep /INSTNAME/, $_) { $_ =~ s/INSTNAME/$instname/og }
-    print FH2;
+    print OUTPUT;
 }
-close(FH1);
-close(FH2);
+close(TEMPLATE);
+close(OUTPUT);
 chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${api_adapter_file}");
 
 #---------------------------------------------------------------
@@ -129,35 +129,37 @@ if (!$xsl) {
     # Generate the sql_lookup.csh script from a template.
     # Substitute the version token into the path of the 'source' command.
     #----------------------------------------------------------------------------
-    open(FH1,"<$sql_lookup_template_file")  or die "Unable to open input file $sql_lookup_template_file\n";
-    open(FH2,">$sql_lookup_file") or die "Unable to open output file $sql_lookup_file\n";
-    while (<FH1>) {
+    open(TEMPLATE,"<$sql_lookup_template_file")  or die "Unable to open input file $sql_lookup_template_file\n";
+    open(OUTPUT,">$sql_lookup_file") or die "Unable to open output file $sql_lookup_file\n";
+    while (<TEMPLATE>) {
         if (grep /VER/, $_) { $_ =~ s/VER/$ver/g }
+        print OUTPUT;
     }
-    close(FH1);
-    close(FH2);
+    close(TEMPLATE);
+    close(OUTPUT);
     chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${sql_lookup_file}");
 
     #---------------------------------------------------------
     # Generate the sql_lookup.cgi script from a template.
     # Substitute Oracle user id and password, Z308 prefix.
     #---------------------------------------------------------
-    open(FH1,"<$sql_lookup_cgi_template_file")  or die "Unable to open input file $sql_lookup_cgi_template_file\n";
-    open(FH2,">$sql_lookup_cgi_file") or die "Unable to open output file $sql_lookup_cgi_file\n";
-    while (<FH1>) {
+    open(TEMPLATE,"<$sql_lookup_cgi_template_file")  or die "Unable to open input file $sql_lookup_cgi_template_file\n";
+    open(OUTPUT,">$sql_lookup_cgi_file") or die "Unable to open output file $sql_lookup_cgi_file\n";
+    while (<TEMPLATE>) {
         if (grep /DBUSER/, $_)     { $_ =~ s/DBUSER/$db_user/g }
         if (grep /DBPASSWORD/, $_) { $_ =~ s/DBPASSWORD/$db_password/g }
         if (grep /Z308PRE/, $_)    { $_ =~ s/Z308PRE/$z308_prefix/g }
+        print OUTPUT;
     }
-    close(FH1);
-    close(FH2);
+    close(TEMPLATE);
+    close(OUTPUT);
     chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${sql_lookup_cgi_file}");
 }
 
 #----------------------------
 # Validate the installation
 #----------------------------
-print "\nValidating the installation\n";
+print "\n### Validating the installation ###\n";
 my @messages = `./validate.pl $aleph_id $jboss_port`;
 foreach (@messages) { print }
 exit;
