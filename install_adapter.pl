@@ -72,7 +72,7 @@ if (!$xsl) {
 #-------------------------------------------------------------
 my $aleph_id;
 if ($xsl) {
-     $aleph_id = display(\"\nPlease enter a patron's Aleph id that can be used to test access to the X-server and the REST API: ");
+    $aleph_id = display(\"\nPlease enter a patron's Aleph id that can be used to test access to the X-server and the REST API: ");
 } else {
     $aleph_id = display(\"\nPlease enter a patron's Aleph id that can be used to test access to the REST API: ");
 }
@@ -115,6 +115,7 @@ while (<TEMPLATE>) {
     if (grep /WHITELIST/, $_) { $_ =~ s/WHITELIST/$ip_string/g }
     if (grep /PORT/, $_) { $_ =~ s/PORT/$jboss_port/og }
     if (grep /INSTNAME/, $_) { $_ =~ s/INSTNAME/$instname/og }
+    $_ = "${1}1${2}" if ($_ =~ /^(\s*my\s*\$sql_lookup\s*=\s*)\d(;\s*)$/);
     print OUTPUT;
 }
 close(TEMPLATE);
