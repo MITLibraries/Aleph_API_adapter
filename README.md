@@ -126,7 +126,7 @@ When the adapter is implemented it does not foreclose the direct use of the REST
 
     The installation script will perform the following operations:
 
-    a.  Get the ‘PWD’ environment variable and extract the version token from the path.
+    a.  Get the ‘HOME’ environment variable and extract the version token from the path.
 
     b.  Prompt the installer for the institution’s name. This will be used in the adapter’s response to an ‘ilsinstance’ call, the one non-Aleph call that it accepts. Here is an example of the structure returned by the ‘ilsinstance’ call, reporting the institution’s name, the version of Aleph, and a few site-specific Aleph variables:
     ```

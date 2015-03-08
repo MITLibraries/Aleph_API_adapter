@@ -20,9 +20,13 @@ my $sql_lookup_cgi_file          = 'sql_lookup.cgi';
 #-------------------------------------------
 # Extract the version token from the path
 #-------------------------------------------
-my $string = $ENV{PWD};
-my $ver = substr($string,16,5);
-$ver =~ s/u/a/i;
+my $current_user_home_dir = $ENV{HOME};
+my $ver;
+if ($current_user_home_dir =~ /[au]([^\/]+?)\/alephm$/) {
+    $ver = "a$1";
+} else {
+    die "Unable to extract Aleph version from the current user \$HOME path\n";
+}
 
 #-----------------------------------------------------
 # Prompt the installer for the institution's name.
@@ -153,7 +157,7 @@ if (!$xsl) {
 #----------------------------
 # Validate the installation
 #----------------------------
-print "Validating the installation\n";
+print "\nValidating the installation\n";
 my @messages = `./validate.pl $aleph_id $jboss_port`;
 foreach (@messages) { print }
 exit;
