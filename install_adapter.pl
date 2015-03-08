@@ -51,6 +51,7 @@ open(OUTPUT,">sql_lookup.txt");
 print OUTPUT "$xsl\n";
 close(OUTPUT);
 
+my $db_schema;
 my $db_user;
 my $db_password;
 my $z308_prefix;
@@ -59,11 +60,13 @@ if (!$xsl) {
     # Prompt the installer for the Oracle user id of the ADM library,
     # usually <xxx>50, and that user's Oracle password.
     #-------------------------------------------------------------------
-    $db_user = display(\"\nPlease enter the Oracle user id for the ADM library (usually <xxx>50): ");
+    $db_schema   = display(\"\nPlease enter the Oracle schema id for the USR library (usually <xxx>00): ");
+
+    $db_user     = display(\"\nPlease enter the Oracle user id with the right reading $db_schema.Z308 table: ");
 
     $db_password = display(\"\nPlease enter the Oracle password for user id $db_user: ");
 
-    $z308_prefix = display(\"\nPlease enter the two-number 'type' prefix from the Z308 Oracle table that corresponds with the identifiers that will be submitted for lookup: ");
+    $z308_prefix = display(\"\nPlease enter the two-number 'type' prefix from the $db_schema.Z308 Oracle table that corresponds with the identifiers that will be submitted for lookup: ");
 }
 
 #-------------------------------------------------------------
@@ -147,6 +150,7 @@ if (!$xsl) {
     open(TEMPLATE,"<$sql_lookup_cgi_template_file")  or die "Unable to open input file $sql_lookup_cgi_template_file\n";
     open(OUTPUT,">$sql_lookup_cgi_file") or die "Unable to open output file $sql_lookup_cgi_file\n";
     while (<TEMPLATE>) {
+        if (grep /DBSCHEMA/, $_)   { $_ =~ s/DBSCHEMA/$db_schema/g }
         if (grep /DBUSER/, $_)     { $_ =~ s/DBUSER/$db_user/g }
         if (grep /DBPASSWORD/, $_) { $_ =~ s/DBPASSWORD/$db_password/g }
         if (grep /Z308PRE/, $_)    { $_ =~ s/Z308PRE/$z308_prefix/g }

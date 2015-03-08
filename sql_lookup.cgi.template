@@ -17,6 +17,7 @@ my $patron_id = uc($ARGV[0]);
 #--------------------------
 #   Set variables
 #--------------------------
+my $db_schema   = 'DBSCHEMA';
 my $db_user     = 'DBUSER';
 my $db_password = 'DBPASSWORD';
 my $z308_prefix = 'Z308PRE';
@@ -34,7 +35,7 @@ my $dbh = DBI->connect ("dbi:Oracle:host=$oracle_host;sid=$oracle_sid", "$db_use
 #   Prepare and execute SQL statement
 #---------------------------------------------
 my $sqlsearch = qq{ SELECT /*+ DYNAMIC_SAMPLING(2) ALL_ROWS */ /*+ ordered */  z308_id
-                    FROM z308
+                    FROM $db_schema.z308
                     WHERE z308_rec_key LIKE ? };
 my $search_term = join('', $z308_prefix, $patron_id, '%');
 
