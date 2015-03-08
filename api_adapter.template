@@ -186,7 +186,7 @@ if ($group eq 'ilsinstance') {
             #   Incoming identifer requires translation. Since $sql_lookup
             #   is on, convert it to an Aleph id via SQL lookup.
             #---------------------------------------------------------------------
-            $aleph_id = `./sql_lookup.csh $patron_id`;
+            $aleph_id = `./sql_lookup.csh '$patron_id'`;
             print STDERR "*** Aleph id from SQL: $aleph_id ***\n" if $debug;
             $request_uri =~ s/$patron_id/$aleph_id/ig;
         }
