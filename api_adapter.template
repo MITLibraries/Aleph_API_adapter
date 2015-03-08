@@ -141,7 +141,7 @@ if ($group eq 'ilsinstance') {
     my @aleph_info = `./get_aleph_info.csh`;
     my $version = (split ',', $aleph_info[0])[2];
     my $aleph_version = (split ' ', $version)[1];
-    my $currency = $aleph_info[3];
+    my $currency = $aleph_info[scalar(@aleph_info)-1]; # Currency is the last line of the Aleph info list.
     chomp $currency;
 
     my @t = localtime(time);
