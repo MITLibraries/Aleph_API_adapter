@@ -33,6 +33,11 @@ if ($current_user_home_dir =~ /[au]([^\/]+?)\/alephm$/) {
 #-----------------------------------------------------
 my $instname = display(\"\nPlease enter the name of your institution (q=quit): ");
 
+#-----------------------------------------------------
+# Prompt the installer for the locale.
+#-----------------------------------------------------
+my $locale = display(\"\nPlease enter the locale (e.g. 'en_US') of your system installation (q=quit): ");
+
 #-----------------------------------------------------------
 # Prompt the installer for Aleph's REST API port number.
 #-----------------------------------------------------------
@@ -116,8 +121,9 @@ open(TEMPLATE,"<$api_adapter_template_file")  or die "Unable to open input file 
 open(OUTPUT,">$api_adapter_file") or die "Unable to open output file $api_adapter_file\n";
 while (<TEMPLATE>) {
     if (grep /WHITELIST/, $_) { $_ =~ s/WHITELIST/$ip_string/g }
-    if (grep /PORT/, $_) { $_ =~ s/PORT/$jboss_port/og }
-    if (grep /INSTNAME/, $_) { $_ =~ s/INSTNAME/$instname/og }
+    if (grep /PORT/, $_)      { $_ =~ s/PORT/$jboss_port/og }
+    if (grep /INSTNAME/, $_)  { $_ =~ s/INSTNAME/$instname/og }
+    if (grep /LOCALE/, $_)    { $_ =~ s/LOCALE/$locale/og }
     $_ = "${1}1${2}" if ($_ =~ /^(\s*my\s*\$sql_lookup\s*=\s*)\d(;\s*)$/);
     print OUTPUT;
 }
