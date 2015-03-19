@@ -1,7 +1,7 @@
 Aleph API Adapter User’s Guide
 ==============================
 
-*Version 1.6, December 2014*
+*Version 1.6.1, March 2015*
 
 
 ## Overview ##
@@ -68,12 +68,12 @@ When the adapter is implemented it does not foreclose the direct use of the REST
 1.  The adapter is written in Perl. Most Aleph servers have two instances of Perl installed: one that is installed with the OS and one that is installed as part of Aleph. The adapter defaults to running under the standard Perl instance installed with the OS. It is not dependent on the Aleph Perl instance. If the adapter is intended to run under the Aleph-specific Perl installation, the first lines of `api_adapter.template`, `install_adapter.pl`, and `validate.pl` must be altered before the installation scripts are run.
 
     The adapter requires that these four packages be present in the Perl instance where it will run:<br/>
+    **DateTime**</br/>
     **Fcntl**<br/>
     **HTTP::Request**<br/>
     **LWP::UserAgent**<br/>
     **POSIX**<br/>
-    **Switch**<br/>
-    **Time::Local**
+    **Switch**
 
     If the X-server is not licensed on the Aleph server, an SQL lookup will be implemented. In this case, these two additional Perl packages will be required:<br/>
     **DBI**<br/>

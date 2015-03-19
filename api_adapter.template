@@ -7,14 +7,60 @@
 
 use strict;
 use warnings;
+use DateTime;
 use HTTP::Request;
 use LWP::UserAgent;
-use Switch;
 use POSIX;
-use Time::Local;
+use Switch;
 
 my $rest_port = 'PORT';
 my @whitelist = (WHITELIST);
+
+# Based on comments of timezone name abbreviations at
+# http://cpansearch.perl.org/src/DEXTER/POSIX-strftime-GNU-0.01/lib/POSIX/strftime/GNU/PP.pm
+my $time_zone_short_name_deabbreviation = {
+    'MIT'  => 'Midway Islands Time',                             # -1100
+    'HAST' => 'Hawaii Standard Time',                            # -1000
+    'AKST' => 'Alaska Standard Time',                            # -0900
+    'PST'  => 'Pacific Standard Time',                           # -0800
+    'AKDT' => 'Alaska Daylight Saving Time',                     # -0800
+    'PDT'  => 'Pacific Daylight Saving Time',                    # -0700
+    'MST'  => 'Mountain Standard Time',                          # -0700
+    'MDT'  => 'Mountain Daylight Saving Time',                   # -0600
+    'CST'  => 'Central Standard Time',                           # -0600
+    'EST'  => 'Eastern Standard Time',                           # -0500
+    'CDT'  => 'Central Daylight Saving Time',                    # -0500
+    'PRT'  => 'Puerto Rico and US Virgin Islands Time',          # -0400
+    'EDT'  => 'Eastern Daylight Saving Time',                    # -0400
+    'CNT'  => 'Canada Newfoundland Time',                        # -0330
+    'BET'  => 'Brazil Eastern Time',                             # -0300
+    'AGT'  => 'Argentina Standard Time',                         # -0300
+    'CAT'  => 'Central African Time',                            # -0100
+    'GMT'  => 'Universal Coordinated Time/Greenwich Mean Time',  # +0000
+    'WET'  => 'Western European Time',                           # +0000
+    'CET'  => 'Central European Time',                           # +0100
+    'WEST' => 'Western European Summer Time',                    # +0100
+    'ART'  => '(Arabic) Egypt Standard Time',                    # +0200
+    'CEST' => 'Central European Summer Time',                    # +0200
+    'EET'  => 'Eastern European Time',                           # +0200
+    'EAT'  => 'Eastern African Time',                            # +0300
+    'EEST' => 'Eastern European Summer Time',                    # +0300
+    'MET'  => 'Middle East Time',                                # +0330
+    'NET'  => 'Near East Time',                                  # +0400
+    'PLT'  => 'Pakistan Lahore Time',                            # +0500
+    'IST'  => 'India Standard Time',                             # +0530
+    'BST'  => 'Bangladesh Standard Time',                        # +0600
+    'ICT'  => 'Indochina Time',                                  # +0700
+    'AWST' => 'Australia Western Time',                          # +0800
+    'CTT'  => 'China Taiwan Time',                               # +0800
+    'JST'  => 'Japan Standard Time',                             # +0900
+    'ACST' => 'Australia Central Time',                          # +0930
+    'AEST' => 'Australia Eastern Time',                          # +1000
+    'SST'  => 'Solomon Standard Time',                           # +1100
+    'NZST' => 'New Zealand Standard Time',                       # +1200
+    'NZST' => 'New Zealand Daylight Saving Time',                # +1300
+};
+
 #-----------------------------------------------------------------
 #   Only accept connections from authorized IP addresses.
 #-----------------------------------------------------------------
@@ -134,18 +180,23 @@ if ($parameter_trace) {
 #   The Aleph REST API does not support this operation.
 #----------------------------------------------------------------------------
 if ($group eq 'ilsinstance') {
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-    my $timezone = $isdst ? 'Eastern Daylight Time' : 'Eastern Standard Time';
-    my $tzcode = $isdst ? 'EDT' : 'EST';
+    my $dt = DateTime->now( time_zone => 'local' );
+    my $gmt_offset_in_hours = $dt->offset() / 3600;
+    my $tzcode = $dt->time_zone_short_name();
+    my $timezone = $dt->time_zone_long_name();
+
+    # For some timezones, time_zone_long_name() returns more specific place name
+    # than simple ‘deabbreviation’ of the time zone code
+    # (e.g. ‘CET’ -> ‘Europe/Prague’ instead of ‘CET’ -> ‘Central Standard Time’).
+    # On the next line we are trying to determine the standard time zone name
+    # and use it if possible.
+    $timezone = $time_zone_short_name_deabbreviation->{$tzcode} if (exists($time_zone_short_name_deabbreviation->{$tzcode}));
 
     my @aleph_info = `./get_aleph_info.csh`;
     my $version = (split ',', $aleph_info[0])[2];
     my $aleph_version = (split ' ', $version)[1];
     my $currency = $aleph_info[scalar(@aleph_info)-1]; # Currency is the last line of the Aleph info list.
     chomp $currency;
-
-    my @t = localtime(time);
-        my $gmt_offset_in_hours = (timegm(@t) - timelocal(@t)) / 3600;
 
     my $version_string = $version_xml;
     $version_string =~ s/ALEPHVER/$aleph_version/;

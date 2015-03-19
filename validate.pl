@@ -27,7 +27,7 @@ BEGIN {
     close(FH1);
     chomp $xserver_licensed;
 
-    my @modules = ('HTTP::Request','LWP::UserAgent','Switch','POSIX');
+    my @modules = ('DateTime','HTTP::Request','LWP::UserAgent','POSIX','Switch');
     if (!$xserver_licensed) {
         push @modules, 'DBI';
         push @modules, 'DBD::Oracle';
