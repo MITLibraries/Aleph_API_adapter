@@ -74,7 +74,7 @@ my $sql_lookup =      0;
 #-----------------------------------------------------------------
 #   Only accept connections from authorized IP addresses.
 #-----------------------------------------------------------------
-if (!grep /$ENV{REMOTE_ADDR}/, @whitelist) {
+if (!grep /^\Q$ENV{REMOTE_ADDR}\E$/, @whitelist) {
     if ($debug) {
         print STDERR "*** $0: Unauthorized access attempt from $ENV{REMOTE_ADDR} ***\n";
     } else {
@@ -142,12 +142,12 @@ if (grep /\?/, $parms[$#parms]) {
 
 my ($group, $object_id, $category, $function, $subfunction) = '';
 ($group, $object_id, $category, $function, $subfunction) = @parms;
-if (!grep /$group/, @allowed_groups) {
-    print "$html_header invalid group $group";
+if (!grep /^\Q$group\E$/i, @allowed_groups) {
+    print "$html_header invalid group '$group'";
     exit;
 }
-if (!grep /$category/, @allowed_categories) {
-    print "$html_header invalid category $category";
+if (defined($category) and !grep /^\Q$category\E$/i, @allowed_categories) {
+    print "$html_header invalid category '$category'";
     exit;
 }
 
@@ -156,17 +156,19 @@ if (!grep /$category/, @allowed_categories) {
 #   They are stored here in lower case for later use as method calls to LWP.
 #----------------------------------------------------------------------------------------
 my $method = lc $ENV{'REQUEST_METHOD'};
+if (!grep /^\Q$method\E$/i, @allowed_methods) {
+    print "$html_header invalid method '$method'";
+    exit;
+}
 
 #------------------------------------------------------------------------------
-#       This paragraph is for diagnostic purposes only. It writes parameters
-#       and arguments to the Apache log (STDERR) and exits.
+#   This paragraph is for diagnostic purposes only. It writes parameters
+#   and arguments to the Apache log (STDERR) and exits.
 #------------------------------------------------------------------------------
 if ($parameter_trace) {
     print "$html_header";
     foreach my $x (@parms) { print "parm: $x<br>"; }
-    if (@args) {
-        foreach my $x (@args) { print "args: $x<br>"; }
-    }
+    foreach my $x (@args)  { print "args: $x<br>"; }
     if ($debug) {
         my $printline = join '',
                 "*** Group: $group ***\n",
@@ -234,7 +236,7 @@ if ($group eq 'ilsinstance') {
             print STDERR "*** Aleph id: $aleph_id ***\n" if $debug;
             print STDERR "*** Patron id: $object_id ***\n" if $debug;
             print STDERR "*** request_uri before: $request_uri ***\n" if $debug;
-            $request_uri =~ s/$object_id/$aleph_id/ig;
+            $request_uri =~ s/(\/patron\/)\Q$object_id\E/$1$aleph_id/ig;
             print STDERR "*** request_uri after: $request_uri ***\n" if $debug;
         } else {
             #---------------------------------------------------------------------
@@ -243,16 +245,16 @@ if ($group eq 'ilsinstance') {
             #---------------------------------------------------------------------
             $aleph_id = `./sql_lookup.csh '$object_id'`;
             print STDERR "*** Aleph id from SQL: $aleph_id ***\n" if $debug;
-            $request_uri =~ s/$object_id/$aleph_id/ig;
+            $request_uri =~ s/(\/patron\/)\Q$object_id\E/$1$aleph_id/ig;
         }
     }
 
-    if (grep /$method/, @allowed_methods) {
+    if (grep /^\Q$method\E$/i, @allowed_methods) {
         #-----------------------------------
         #   Optional local programming can be inserted here by uncommenting the
         #   switch structure below
         #-----------------------------------
-        #   switch ($category) {
+        #   switch (lc($category)) {
         #       case ('patroninformation') {
         #           # local code here
         #       }
@@ -299,7 +301,7 @@ if ($group eq 'ilsinstance') {
         #------------------------------------------------------------
         #   Remove the port number from any URLs in the XML.
         #------------------------------------------------------------
-        $printline =~ s/localhost:$rest_port/$ENV{'HTTP_HOST'}/go;
+        $printline =~ s/localhost:\Q$rest_port\E/$ENV{'HTTP_HOST'}/go;
     } else {
         #------------------------------------------------------------------
         #   HTTP method is not supported. Return failure message
