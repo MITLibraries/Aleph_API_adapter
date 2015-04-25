@@ -140,8 +140,8 @@ if (grep /\?/, $parms[$#parms]) {
     $parms[$#parms] =~ s/\?(.*)$//go;
 }
 
-my ($group, $patron_id, $category, $function, $subfunction) = '';
-($group, $patron_id, $category, $function, $subfunction) = @parms;
+my ($group, $object_id, $category, $function, $subfunction) = '';
+($group, $object_id, $category, $function, $subfunction) = @parms;
 if (!grep /$group/, @allowed_groups) {
     print "$html_header invalid group $group";
     exit;
@@ -170,7 +170,7 @@ if ($parameter_trace) {
     if ($debug) {
         my $printline = join '',
                 "*** Group: $group ***\n",
-                "*** Patron id: $patron_id ***\n",
+                "*** Object Id: $object_id ***\n",
                 "*** Category: $category ***\n",
                 "*** Function: $function ***\n",
                 "*** Subfunction: $subfunction ***\n";
@@ -226,24 +226,24 @@ if ($group eq 'ilsinstance') {
             #   is not set, convert it to an Aleph id via bor-by-key
             #   x-server function,
             #---------------------------------------------------------------------
-            my $info_prefix = "op=bor-by-key&bor_id=$patron_id";
+            my $info_prefix = "op=bor-by-key&bor_id=$object_id";
             my $rest_url    = join '', $x_base_url, $info_prefix;
             print STDERR "*** Bor-by-key URL: $rest_url ***\n" if $debug;
             $response       = $ua->get($rest_url);
             $aleph_id       = &extract_alephid($response);
             print STDERR "*** Aleph id: $aleph_id ***\n" if $debug;
-            print STDERR "*** Patron id: $patron_id ***\n" if $debug;
+            print STDERR "*** Patron id: $object_id ***\n" if $debug;
             print STDERR "*** request_uri before: $request_uri ***\n" if $debug;
-            $request_uri =~ s/$patron_id/$aleph_id/ig;
+            $request_uri =~ s/$object_id/$aleph_id/ig;
             print STDERR "*** request_uri after: $request_uri ***\n" if $debug;
         } else {
             #---------------------------------------------------------------------
             #   Incoming identifer requires translation. Since $sql_lookup
             #   is on, convert it to an Aleph id via SQL lookup.
             #---------------------------------------------------------------------
-            $aleph_id = `./sql_lookup.csh '$patron_id'`;
+            $aleph_id = `./sql_lookup.csh '$object_id'`;
             print STDERR "*** Aleph id from SQL: $aleph_id ***\n" if $debug;
-            $request_uri =~ s/$patron_id/$aleph_id/ig;
+            $request_uri =~ s/$object_id/$aleph_id/ig;
         }
     }
 
