@@ -61,16 +61,6 @@ my $time_zone_short_name_deabbreviation = {
     'NZST' => 'New Zealand Daylight Saving Time',                # +1300
 };
 
-#-----------------------------------------------------------------
-#   Only accept connections from authorized IP addresses.
-#-----------------------------------------------------------------
-if (!grep /$ENV{REMOTE_ADDR}/, @whitelist) {
-    print STDERR "*** $0: Unauthorized access attempt from $ENV{REMOTE_ADDR} ***\n";
-    print "Content-type: text/html\n\n";
-    print "Unathorized access";
-    exit;
-}
-
 #--------------------------------------------------------------------------------------------
 # $debug and $parameter_trace are for diagnostic purposes and will normally be set to 0.
 # $id_translation will be set to 1 as a default. Setting it to 0 disables the translation
@@ -80,6 +70,20 @@ my $debug =           0;
 my $parameter_trace = 0;
 my $id_translation =  1;
 my $sql_lookup =      0;
+
+#-----------------------------------------------------------------
+#   Only accept connections from authorized IP addresses.
+#-----------------------------------------------------------------
+if (!grep /$ENV{REMOTE_ADDR}/, @whitelist) {
+    if ($debug) {
+        print STDERR "*** $0: Unauthorized access attempt from $ENV{REMOTE_ADDR} ***\n";
+    } else {
+        print STDERR "*** Unauthorized access ***\n";
+    }
+    print "Content-type: text/html\n\n";
+    print "Unathorized access";
+    exit;
+}
 
 #------------------------------------------------------------------------
 #   Local base URLs for the Aleph X-server and the RESTful API.
