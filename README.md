@@ -163,7 +163,7 @@ When the adapter is implemented it does not foreclose the direct use of the REST
 
       1. Generate the **`sql_lookup.csh`** script from a template, interpolating the Aleph version into file paths.
 
-      2. Generate the **`sql_lookup.cgi`** script from a template, interpolating the Oracle user id, the Oracle password, and the ‘z308’ prefix into the appropriate variables.
+      2. Generate the **`sql_lookup.pl`** script from a template, interpolating the Oracle user id, the Oracle password, and the ‘z308’ prefix into the appropriate variables.
 
     k.  Run **`validate.pl`** to test the installation. Validate.pl will perform the following operations:
 

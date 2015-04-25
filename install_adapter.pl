@@ -14,8 +14,8 @@ my $api_adapter_file             = 'api_adapter.cgi';
 my $sql_lookup_template_file     = 'sql_lookup.csh.template';
 my $sql_lookup_file              = 'sql_lookup.csh';
 
-my $sql_lookup_cgi_template_file = 'sql_lookup.cgi.template';
-my $sql_lookup_cgi_file          = 'sql_lookup.cgi';
+my $sql_lookup_pl_template_file = 'sql_lookup.pl.template';
+my $sql_lookup_pl_file          = 'sql_lookup.pl';
 
 #-------------------------------------------
 # Extract the version token from the path
@@ -150,11 +150,11 @@ if (!$xsl) {
     chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${sql_lookup_file}");
 
     #---------------------------------------------------------
-    # Generate the sql_lookup.cgi script from a template.
+    # Generate the sql_lookup.pl script from a template.
     # Substitute Oracle user id and password, Z308 prefix.
     #---------------------------------------------------------
-    open(TEMPLATE,"<$sql_lookup_cgi_template_file")  or die "Unable to open input file $sql_lookup_cgi_template_file\n";
-    open(OUTPUT,">$sql_lookup_cgi_file") or die "Unable to open output file $sql_lookup_cgi_file\n";
+    open(TEMPLATE,"<$sql_lookup_pl_template_file")  or die "Unable to open input file $sql_lookup_pl_template_file\n";
+    open(OUTPUT,">$sql_lookup_pl_file") or die "Unable to open output file $sql_lookup_pl_file\n";
     while (<TEMPLATE>) {
         if (grep /DBSCHEMA/, $_)   { $_ =~ s/DBSCHEMA/$db_schema/g }
         if (grep /DBUSER/, $_)     { $_ =~ s/DBUSER/$db_user/g }
@@ -164,7 +164,7 @@ if (!$xsl) {
     }
     close(TEMPLATE);
     close(OUTPUT);
-    chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${sql_lookup_cgi_file}");
+    chmod(S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, "${sql_lookup_pl_file}");
 }
 
 #----------------------------
