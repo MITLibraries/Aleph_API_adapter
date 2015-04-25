@@ -16,6 +16,27 @@ use Switch;
 my $rest_port = 'PORT';
 my @whitelist = (WHITELIST);
 
+#-----------------------------------------------------------------------------------------
+#   Uncomment the following setting to enable rewriting of any occurrence of
+#   string
+#
+#     href="$int_protocol://$int_domain/$int_url_prefix
+#
+#   (i.e. internal REST API URL) in the REST API response to string
+#
+#     href="$ext_protocol://$ext_domain/$ext_url_prefix
+#
+#   (i.e. external public REST API URL).
+#
+#   This is useful if the public REST API URL differs from the default location 
+#   and we want to provide correct links in our REST API responses.
+#-----------------------------------------------------------------------------------------
+# my ($int_protocol, $int_domain, $int_url_prefix,
+#     $ext_protocol, $ext_domain, $ext_url_prefix)
+#     = ('http',  'aleph.example.com', 'rest-dlf/',
+#        'https', 'aleph.example.com', 'ebscoIntegrationApi/');
+
+
 # Based on comments of timezone name abbreviations at
 # http://cpansearch.perl.org/src/DEXTER/POSIX-strftime-GNU-0.01/lib/POSIX/strftime/GNU/PP.pm
 my $time_zone_short_name_deabbreviation = {
@@ -236,6 +257,13 @@ if ($group eq 'ilsinstance') {
     my $ua  = LWP::UserAgent->new;
 
     my $request_uri = $ENV{'REQUEST_URI'};
+    #----------------------------------------------------------------------
+    #   Rewrite URL prefix for request.
+    #----------------------------------------------------------------------
+    if (defined($request_uri)
+            and defined($int_url_prefix) and defined($ext_url_prefix)) {
+        $request_uri =~ s/^\E$ext_url_prefix\Q/$int_url_prefix/g;
+    }
     my $response = '';
     my $aleph_id = '';
     if ($group eq 'patron' && $id_translation) {
@@ -325,6 +353,15 @@ if ($group eq 'ilsinstance') {
         #------------------------------------------------------------------
         $printline = join '', $xml_prolog, "<note>HTTP command $method is restricted or invalid</note>";
     }
+}
+
+#-----------------------------------------------------------------------------------------
+#   Rewrite URL prefix in the response.
+#-----------------------------------------------------------------------------------------
+if (defined($printline)
+        and defined($int_protocol) and defined($int_domain) and defined($int_url_prefix)
+        and defined($ext_protocol) and defined($ext_domain) and defined($ext_url_prefix)) {
+    $printline =~ s/(href=['"])\E$int_protocol\Q(:\/\/)\E$int_domain\Q(\/)\E$int_url_prefix\Q/$1$ext_protocol$2$ext_domain$3$ext_url_prefix/g;
 }
 
 #-----------------------------------------------------------------------------------------
