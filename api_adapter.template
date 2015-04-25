@@ -31,10 +31,12 @@ my @whitelist = (WHITELIST);
 #   This is useful if the public REST API URL differs from the default location 
 #   and we want to provide correct links in our REST API responses.
 #-----------------------------------------------------------------------------------------
-# my ($int_protocol, $int_domain, $int_url_prefix,
+my ($int_protocol, $int_domain, $int_url_prefix,
+    $ext_protocol, $ext_domain, $ext_url_prefix);
+#    ($int_protocol, $int_domain, $int_url_prefix,
 #     $ext_protocol, $ext_domain, $ext_url_prefix)
-#     = ('http',  'aleph.example.com', 'rest-dlf/',
-#        'https', 'aleph.example.com', 'ebscoIntegrationApi/');
+#        = ('http',  'aleph.example.com', 'rest-dlf/',
+#           'https', 'aleph.example.com', 'ebscoIntegrationApi/');
 
 
 # Based on comments of timezone name abbreviations at
@@ -262,7 +264,7 @@ if ($group eq 'ilsinstance') {
     #----------------------------------------------------------------------
     if (defined($request_uri)
             and defined($int_url_prefix) and defined($ext_url_prefix)) {
-        $request_uri =~ s/^\E$ext_url_prefix\Q/$int_url_prefix/g;
+        $request_uri =~ s/^(\/)\Q$ext_url_prefix\E/$1$int_url_prefix/g;
     }
     my $response = '';
     my $aleph_id = '';
@@ -361,7 +363,7 @@ if ($group eq 'ilsinstance') {
 if (defined($printline)
         and defined($int_protocol) and defined($int_domain) and defined($int_url_prefix)
         and defined($ext_protocol) and defined($ext_domain) and defined($ext_url_prefix)) {
-    $printline =~ s/(href=['"])\E$int_protocol\Q(:\/\/)\E$int_domain\Q(\/)\E$int_url_prefix\Q/$1$ext_protocol$2$ext_domain$3$ext_url_prefix/g;
+    $printline =~ s/(href=['"])\Q$int_protocol\E(:\/\/)\Q$int_domain\E(\/)\Q$int_url_prefix\E/$1$ext_protocol$2$ext_domain$3$ext_url_prefix/g;
 }
 
 #-----------------------------------------------------------------------------------------
