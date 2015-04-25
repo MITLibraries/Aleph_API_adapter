@@ -115,13 +115,15 @@ my $postdata;
 
 #----------------------------------------------------
 #   Valid parameters in Aleph RESTful URLs
+#   see https://developers.exlibrisgroup.com/aleph/apis/Aleph-RESTful-APIs
 #----------------------------------------------------
 my @allowed_groups       = ('patron','ilsinstance','record');
-my @allowed_categories   = ('patroninformation','circulationactions','record','patronstatus','items','holds');
-my @patinfo_functions    = ('address','password');
-my @circ_functions       = ('loans','requests','cash');
-my @patstatus_functions  = ('blocks','registration');
-my @allowed_subfunctions = ('holds','photocopies','acquisitionrequests','ill','bookings');
+#my @allowed_categories   = ('patroninformation','circulationactions','acqRequest','record','patronstatus','items','filters','holdings');
+my @allowed_categories   = ('patroninformation','circulationactions','record','patronstatus','items','holdings');
+#my @allowed_functions    = ('address','password','loans','requests','cash','holds','acqRequest','shortLoan','ill','items','blocks','registration');
+my @allowed_functions    = ('address','password','loans','requests','cash','blocks','registration');
+#my @allowed_subfunctions = ('holds','photocopies','acq','ill','bookings','hold','shortLoan','photo');
+my @allowed_subfunctions = ('holds','photocopies','acq','ill','bookings');
 
 #--------------------------------
 #   Valid HTTP methods
@@ -140,14 +142,29 @@ if (grep /\?/, $parms[$#parms]) {
     $parms[$#parms] =~ s/\?(.*)$//go;
 }
 
-my ($group, $object_id, $category, $function, $subfunction) = '';
-($group, $object_id, $category, $function, $subfunction) = @parms;
+my ($group, $object_id, $category, @other_params) = '';
+   ($group, $object_id, $category, @other_params) = @parms;
+my ($function_object, $function, $subfunction_object, $subfunction) = '';
+if ($category =~ /^(record|items|holdings|)$/i) {
+   ($function_object, $function, $subfunction_object, $subfunction) = @other_params;
+} else {
+   ($function, $subfunction, $subfunction_object) = @other_params;
+}
+
 if (!grep /^\Q$group\E$/i, @allowed_groups) {
     print "$html_header invalid group '$group'";
     exit;
 }
 if (defined($category) and !grep /^\Q$category\E$/i, @allowed_categories) {
     print "$html_header invalid category '$category'";
+    exit;
+}
+if (defined($function) and !grep /^\Q$function\E$/i, @allowed_functions) {
+    print "$html_header invalid category '$function'";
+    exit;
+}
+if (defined($subfunction) and !grep /^\Q$subfunction\E$/i, @allowed_subfunctions) {
+    print "$html_header invalid category '$subfunction'";
     exit;
 }
 
