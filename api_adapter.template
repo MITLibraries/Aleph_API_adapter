@@ -160,6 +160,10 @@ my @allowed_methods = ('get','post','put','delete');
 #----------------------------------------------------------------------------
 my @parms = split /\//, (split /\?parm1=/, lc $ENV{'REQUEST_URI'})[0];
 splice @parms,0,2;
+unless (@parms) {
+    print "$html_header invalid params";
+    exit;
+}
 my @args = split /\&/, (split /\?/, $parms[$#parms])[1];
 if (grep /\?/, $parms[$#parms]) {
     $parms[$#parms] =~ s/\?(.*)$//go;
