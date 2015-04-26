@@ -187,11 +187,11 @@ if (defined($category) and !grep /^\Q$category\E$/i, @allowed_categories) {
     exit;
 }
 if (defined($function) and !grep /^\Q$function\E$/i, @allowed_functions) {
-    print "$html_header invalid category '$function'";
+    print "$html_header invalid function '$function'";
     exit;
 }
 if (defined($subfunction) and !grep /^\Q$subfunction\E$/i, @allowed_subfunctions) {
-    print "$html_header invalid category '$subfunction'";
+    print "$html_header invalid subfunction '$subfunction'";
     exit;
 }
 
