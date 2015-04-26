@@ -172,7 +172,7 @@ if (grep /\?/, $parms[$#parms]) {
 my ($group, $object_id, $category, @other_params) = '';
    ($group, $object_id, $category, @other_params) = @parms;
 my ($function_object, $function, $subfunction_object, $subfunction) = '';
-if ($category =~ /^(record|items|holdings|)$/i) {
+if ($category =~ /^(record|items|holdings)$/i) {
    ($function_object, $function, $subfunction_object, $subfunction) = @other_params;
 } else {
    ($function, $subfunction, $subfunction_object) = @other_params;
