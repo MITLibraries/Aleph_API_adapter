@@ -1,276 +1,396 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
 
 #--------------------------------------------------------------
 # 12-05-2014 Rich Wenger, MIT Libraries
-# This script provides Aleph services to an external server. 
+# This script provides Aleph services to an external server.
 #--------------------------------------------------------------
 
 use strict;
 use warnings;
+use DateTime;
 use HTTP::Request;
 use LWP::UserAgent;
-use Switch;
 use POSIX;
-use Time::Local;
+use Switch;
 
 my $rest_port = 'PORT';
 my @whitelist = (WHITELIST);
-#-----------------------------------------------------------------
-#	Only accept connections from authorized IP addresses. 
-#-----------------------------------------------------------------
-if (!grep /$ENV{REMOTE_ADDR}/, @whitelist) {
-	print STDERR "*** $0: Unauthorized access attempt from $ENV{REMOTE_ADDR} ***\n"; 
-	print "Content-type: text/html\n\n";
-	print "Unathorized access";
-	exit;
-	}
+
+#-----------------------------------------------------------------------------------------
+#   Uncomment the following setting to enable rewriting of any occurrence of
+#   string
+#
+#     href="$int_protocol://$int_domain/$int_url_prefix
+#
+#   (i.e. internal REST API URL) in the REST API response to string
+#
+#     href="$ext_protocol://$ext_domain/$ext_url_prefix
+#
+#   (i.e. external public REST API URL).
+#
+#   This is useful if the public REST API URL differs from the default location 
+#   and we want to provide correct links in our REST API responses.
+#-----------------------------------------------------------------------------------------
+my ($int_protocol, $int_domain, $int_url_prefix,
+    $ext_protocol, $ext_domain, $ext_url_prefix);
+#    ($int_protocol, $int_domain, $int_url_prefix,
+#     $ext_protocol, $ext_domain, $ext_url_prefix)
+#        = ('http',  'aleph.example.com', 'rest-dlf/',
+#           'https', 'aleph.example.com', 'ebscoIntegrationApi/');
+
+
+# Based on comments of timezone name abbreviations at
+# http://cpansearch.perl.org/src/DEXTER/POSIX-strftime-GNU-0.01/lib/POSIX/strftime/GNU/PP.pm
+my $time_zone_short_name_deabbreviation = {
+    'MIT'  => 'Midway Islands Time',                             # -1100
+    'HAST' => 'Hawaii Standard Time',                            # -1000
+    'AKST' => 'Alaska Standard Time',                            # -0900
+    'PST'  => 'Pacific Standard Time',                           # -0800
+    'AKDT' => 'Alaska Daylight Saving Time',                     # -0800
+    'PDT'  => 'Pacific Daylight Saving Time',                    # -0700
+    'MST'  => 'Mountain Standard Time',                          # -0700
+    'MDT'  => 'Mountain Daylight Saving Time',                   # -0600
+    'CST'  => 'Central Standard Time',                           # -0600
+    'EST'  => 'Eastern Standard Time',                           # -0500
+    'CDT'  => 'Central Daylight Saving Time',                    # -0500
+    'PRT'  => 'Puerto Rico and US Virgin Islands Time',          # -0400
+    'EDT'  => 'Eastern Daylight Saving Time',                    # -0400
+    'CNT'  => 'Canada Newfoundland Time',                        # -0330
+    'BET'  => 'Brazil Eastern Time',                             # -0300
+    'AGT'  => 'Argentina Standard Time',                         # -0300
+    'CAT'  => 'Central African Time',                            # -0100
+    'GMT'  => 'Universal Coordinated Time/Greenwich Mean Time',  # +0000
+    'WET'  => 'Western European Time',                           # +0000
+    'CET'  => 'Central European Time',                           # +0100
+    'WEST' => 'Western European Summer Time',                    # +0100
+    'ART'  => '(Arabic) Egypt Standard Time',                    # +0200
+    'CEST' => 'Central European Summer Time',                    # +0200
+    'EET'  => 'Eastern European Time',                           # +0200
+    'EAT'  => 'Eastern African Time',                            # +0300
+    'EEST' => 'Eastern European Summer Time',                    # +0300
+    'MET'  => 'Middle East Time',                                # +0330
+    'NET'  => 'Near East Time',                                  # +0400
+    'PLT'  => 'Pakistan Lahore Time',                            # +0500
+    'IST'  => 'India Standard Time',                             # +0530
+    'BST'  => 'Bangladesh Standard Time',                        # +0600
+    'ICT'  => 'Indochina Time',                                  # +0700
+    'AWST' => 'Australia Western Time',                          # +0800
+    'CTT'  => 'China Taiwan Time',                               # +0800
+    'JST'  => 'Japan Standard Time',                             # +0900
+    'ACST' => 'Australia Central Time',                          # +0930
+    'AEST' => 'Australia Eastern Time',                          # +1000
+    'SST'  => 'Solomon Standard Time',                           # +1100
+    'NZST' => 'New Zealand Standard Time',                       # +1200
+    'NZST' => 'New Zealand Daylight Saving Time',                # +1300
+};
 
 #--------------------------------------------------------------------------------------------
 # $debug and $parameter_trace are for diagnostic purposes and will normally be set to 0.
 # $id_translation will be set to 1 as a default. Setting it to 0 disables the translation
-# of alternate identifiers to Aleph ids by the adapter. 
+# of alternate identifiers to Aleph ids by the adapter.
 #--------------------------------------------------------------------------------------------
-my $debug = 		0;
-my $parameter_trace = 	0;
-my $id_translation = 	1;
-my $sql_lookup = 	0;
+my $debug =           0;
+my $parameter_trace = 0;
+my $id_translation =  1;
+my $sql_lookup =      0;
+
+#-----------------------------------------------------------------
+#   Only accept connections from authorized IP addresses.
+#-----------------------------------------------------------------
+if (!grep /^\Q$ENV{REMOTE_ADDR}\E$/, @whitelist) {
+    if ($debug) {
+        print STDERR "*** $0: Unauthorized access attempt from $ENV{REMOTE_ADDR} ***\n";
+    } else {
+        print STDERR "*** Unauthorized access ***\n";
+    }
+    print "Content-type: text/html\n\n";
+    print "Unathorized access";
+    exit;
+}
 
 #------------------------------------------------------------------------
-#	Local base URLs for the Aleph X-server and the RESTful API.
+#   Local base URLs for the Aleph X-server and the RESTful API.
 #------------------------------------------------------------------------
-my $x_base_url 	= 'http://localhost/X?';
-my $r_base_url 	= "http://localhost:$rest_port";
+my $x_base_url = 'http://localhost/X?';
+my $r_base_url = "http://localhost:$rest_port";
 
 #-------------------------------------
-#	Headers and XML constants.
+#   Headers and XML constants.
 #-------------------------------------
-my $xml_header 	= "Content-type: text/xml\n\n";
+my $xml_header  = "Content-type: text/xml\n\n";
 my $html_header = "Content-type: text/html\n\n";
-my $xml_prolog 	= '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+my $xml_prolog  = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 
-my $version_xml = join '', 
-	'<version>',
-    	'<ilsInstitutionName>INSTNAME</ilsInstitutionName>',
-    	'<ilsVersion>ALEPHVER</ilsVersion>',
-    	'<locale>en_US</locale>',
-    	'<timeZone>TIMEZONE</timeZone>',
-    	'<timeZoneCode>TZCODE</timeZoneCode>',
-	'<timeZoneGMT>TZGMT</timeZoneGMT>',
-    	'<currencyCode>CURRENCY</currencyCode>',
-	'</version>';
+my $version_xml = join '',
+    '<version>',
+        '<ilsInstitutionName>INSTNAME</ilsInstitutionName>',
+        '<ilsVersion>ALEPHVER</ilsVersion>',
+        '<locale>LOCALE</locale>',
+        '<timeZone>TIMEZONE</timeZone>',
+        '<timeZoneCode>TZCODE</timeZoneCode>',
+        '<timeZoneGMT>TZGMT</timeZoneGMT>',
+        '<currencyCode>CURRENCY</currencyCode>',
+    '</version>';
 
 my $printline = '';
 my $putdata;
 my $postdata;
 
 #----------------------------------------------------
-#	Valid parameters in Aleph RESTful URLs
+#   Valid parameters in Aleph RESTful URLs
+#   see https://developers.exlibrisgroup.com/aleph/apis/Aleph-RESTful-APIs
 #----------------------------------------------------
-my @allowed_groups 	 = ('patron','ilsinstance','record');
-my @allowed_categories 	 = ('patroninformation','circulationactions','record','patronstatus','items','holds');
-my @patinfo_functions 	 = ('address','password');
-my @circ_functions 	 = ('loans','requests','cash');
-my @patstatus_functions  = ('blocks','registration');
-my @allowed_subfunctions = ('holds','photocopies','acquisitionrequests','ill','bookings');
+my @allowed_groups       = ('patron','ilsinstance','record');
+#my @allowed_categories   = ('patroninformation','circulationactions','acqRequest','record','patronstatus','items','filters','holdings');
+my @allowed_categories   = ('patroninformation','circulationactions','record','patronstatus','items','holdings');
+#my @allowed_functions    = ('address','password','loans','requests','cash','holds','acqRequest','shortLoan','ill','items','blocks','registration');
+my @allowed_functions    = ('address','password','loans','requests','cash','blocks','registration');
+#my @allowed_subfunctions = ('holds','photocopies','acq','ill','bookings','hold','shortLoan','photo');
+my @allowed_subfunctions = ('holds','photocopies','acq','ill','bookings');
 
 #--------------------------------
-#	Valid HTTP methods 
+#   Valid HTTP methods
 #--------------------------------
-my @allowed_methods	 = ('get','post','put','delete');
+my @allowed_methods = ('get','post','put','delete');
 
 #----------------------------------------------------------------------------
-#	Get the RESTful URL components. 
-#	@parms will contain the RESTful nodes between slashes.
-#	@args will contain any key=value pairs from the end of the URI.
+#   Get the RESTful URL components.
+#   @parms will contain the RESTful nodes between slashes.
+#   @args will contain any key=value pairs from the end of the URI.
 #----------------------------------------------------------------------------
 my @parms = split /\//, (split /\?parm1=/, lc $ENV{'REQUEST_URI'})[0];
 splice @parms,0,2;
+unless (@parms) {
+    print "$html_header invalid params";
+    exit;
+}
 my @args = split /\&/, (split /\?/, $parms[$#parms])[1];
 if (grep /\?/, $parms[$#parms]) {
-	$parms[$#parms] =~ s/\?(.*)$//go;
-	}
+    $parms[$#parms] =~ s/\?(.*)$//go;
+}
 
-my ($group, $patron_id, $category, $function, $subfunction) = '';
-($group, $patron_id, $category, $function, $subfunction) = @parms;
-if (!grep /$group/, @allowed_groups) {
-	print "$html_header invalid group $group";
-	exit;
-	}
-if (!grep /$category/, @allowed_categories) {
-	print "$html_header invalid category $category";
-	exit;
-	}
+my ($group, $object_id, $category, @other_params) = '';
+   ($group, $object_id, $category, @other_params) = @parms;
+my ($function_object, $function, $subfunction_object, $subfunction) = '';
+if ($category =~ /^(record|items|holdings)$/i) {
+   ($function_object, $function, $subfunction_object, $subfunction) = @other_params;
+} elsif ($category =~ /^circulationactions$/i and $other_params[0] =~ /^(loans|cash)$/i) {
+   ($function, $subfunction_object, $subfunction) = @other_params;
+} else {
+   ($function, $subfunction, $subfunction_object) = @other_params;
+}
+
+if (!grep /^\Q$group\E$/i, @allowed_groups) {
+    print "$html_header invalid group '$group'";
+    exit;
+}
+if (defined($category) and !grep /^\Q$category\E$/i, @allowed_categories) {
+    print "$html_header invalid category '$category'";
+    exit;
+}
+if (defined($function) and !grep /^\Q$function\E$/i, @allowed_functions) {
+    print "$html_header invalid function '$function'";
+    exit;
+}
+if (defined($subfunction) and !grep /^\Q$subfunction\E$/i, @allowed_subfunctions) {
+    print "$html_header invalid subfunction '$subfunction'";
+    exit;
+}
 
 #----------------------------------------------------------------------------------------
-#	$method will contain one of the HTTP commands: GET, POST, PUT, DELETE, etc.
-#	They are stored here in lower case for later use as method calls to LWP.
+#   $method will contain one of the HTTP commands: GET, POST, PUT, DELETE, etc.
+#   They are stored here in lower case for later use as method calls to LWP.
 #----------------------------------------------------------------------------------------
 my $method = lc $ENV{'REQUEST_METHOD'};
+if (!grep /^\Q$method\E$/i, @allowed_methods) {
+    print "$html_header invalid method '$method'";
+    exit;
+}
 
 #------------------------------------------------------------------------------
-#       This paragraph is for diagnostic purposes only. It writes parameters 
-#       and arguments to the Apache log (STDERR) and exits.
+#   This paragraph is for diagnostic purposes only. It writes parameters
+#   and arguments to the Apache log (STDERR) and exits.
 #------------------------------------------------------------------------------
 if ($parameter_trace) {
-	print "$html_header";
-	foreach my $x (@parms) { print "parm: $x<br>"; }
-	if (@args) {
-		foreach my $x (@args) { print "args: $x<br>"; }
-		}
-	if ($debug) {
-		my $printline = join '',
-				"*** Group: $group ***\n",
-				"*** Patron id: $patron_id ***\n",
-				"*** Category: $category ***\n",
-				"*** Function: $function ***\n",
-				"*** Subfunction: $subfunction ***\n";
-		print STDERR $printline;
-		}
-	exit;
-	}
+    print "$html_header";
+    foreach my $x (@parms) { print "parm: $x<br>"; }
+    foreach my $x (@args)  { print "args: $x<br>"; }
+    if ($debug) {
+        my $printline = join '',
+                "*** Group: $group ***\n",
+                "*** Object Id: $object_id ***\n",
+                "*** Category: $category ***\n",
+                "*** Function: $function ***\n",
+                "*** Subfunction: $subfunction ***\n";
+        print STDERR $printline;
+    }
+    exit;
+}
 
 #----------------------------------------------------------------------------
-#	This section handles the request for Aleph version information.
-#	The Aleph REST API does not support this operation.
+#   This section handles the request for Aleph version information.
+#   The Aleph REST API does not support this operation.
 #----------------------------------------------------------------------------
 if ($group eq 'ilsinstance') {
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);    
-	my $timezone = $isdst ? 'Eastern Daylight Time' : 'Eastern Standard Time';
-	my $tzcode = $isdst ? 'EDT' : 'EST';
+    my $dt = DateTime->now( time_zone => 'local' );
+    my $gmt_offset_in_hours = $dt->offset() / 3600;
+    my $tzcode = $dt->time_zone_short_name();
+    my $timezone = $dt->time_zone_long_name();
 
-	my @aleph_info = `./get_aleph_info.csh`;
-	my $version = (split ',', $aleph_info[0])[2];
-	my $aleph_version = (split ' ', $version)[1];
-	my $currency = $aleph_info[3];
-	chomp $currency;
+    # For some timezones, time_zone_long_name() returns more specific place name
+    # than simple ‘deabbreviation’ of the time zone code
+    # (e.g. ‘CET’ -> ‘Europe/Prague’ instead of ‘CET’ -> ‘Central Standard Time’).
+    # On the next line we are trying to determine the standard time zone name
+    # and use it if possible.
+    $timezone = $time_zone_short_name_deabbreviation->{$tzcode} if (exists($time_zone_short_name_deabbreviation->{$tzcode}));
 
-	my @t = localtime(time);
-        my $gmt_offset_in_hours = (timegm(@t) - timelocal(@t)) / 3600;
+    my @aleph_info = `./get_aleph_info.csh`;
+    my $version = (split ',', $aleph_info[0])[2];
+    my $aleph_version = (split ' ', $version)[1];
+    my $currency = $aleph_info[scalar(@aleph_info)-1]; # Currency is the last line of the Aleph info list.
+    chomp $currency;
 
-	my $version_string = $version_xml;
-	$version_string =~ s/ALEPHVER/$aleph_version/;
-	$version_string =~ s/TIMEZONE/$timezone/;
-	$version_string =~ s/TZCODE/$tzcode/;
-	$version_string =~ s/TZGMT/$gmt_offset_in_hours/;
-	$version_string =~ s/CURRENCY/$currency/;
+    my $version_string = $version_xml;
+    $version_string =~ s/ALEPHVER/$aleph_version/;
+    $version_string =~ s/TIMEZONE/$timezone/;
+    $version_string =~ s/TZCODE/$tzcode/;
+    $version_string =~ s/TZGMT/$gmt_offset_in_hours/;
+    $version_string =~ s/CURRENCY/$currency/;
 
-	$printline = join '', $xml_prolog, $version_string;
-        } 
+    $printline = join '', $xml_prolog, $version_string;
+} else {
+    #----------------------------------------------------------------------
+    #   Instantiate a user agent for use in calling the REST API.
+    #----------------------------------------------------------------------
+    my $ua  = LWP::UserAgent->new;
 
-else {
-	#----------------------------------------------------------------------
-	#       Instantiate a user agent for use in calling the REST API.
-	#----------------------------------------------------------------------
-	my $ua  = LWP::UserAgent->new;
+    my $request_uri = $ENV{'REQUEST_URI'};
+    #----------------------------------------------------------------------
+    #   Rewrite URL prefix for request.
+    #----------------------------------------------------------------------
+    if (defined($request_uri)
+            and defined($int_url_prefix) and defined($ext_url_prefix)) {
+        $request_uri =~ s/^(\/)\Q$ext_url_prefix\E/$1$int_url_prefix/g;
+    }
+    my $response = '';
+    my $aleph_id = '';
+    if ($group eq 'patron' && $id_translation) {
+        if (!$sql_lookup) {
+            #---------------------------------------------------------------------
+            #   Incoming identifer requires translation. Since $sql_lookup
+            #   is not set, convert it to an Aleph id via bor-by-key
+            #   x-server function,
+            #---------------------------------------------------------------------
+            my $info_prefix = "op=bor-by-key&bor_id=$object_id";
+            my $rest_url    = join '', $x_base_url, $info_prefix;
+            print STDERR "*** Bor-by-key URL: $rest_url ***\n" if $debug;
+            $response       = $ua->get($rest_url);
+            $aleph_id       = &extract_alephid($response);
+            print STDERR "*** Aleph id: $aleph_id ***\n" if $debug;
+            print STDERR "*** Patron id: $object_id ***\n" if $debug;
+            print STDERR "*** request_uri before: $request_uri ***\n" if $debug;
+            $request_uri =~ s/(\/patron\/)\Q$object_id\E/$1$aleph_id/ig;
+            print STDERR "*** request_uri after: $request_uri ***\n" if $debug;
+        } else {
+            #---------------------------------------------------------------------
+            #   Incoming identifer requires translation. Since $sql_lookup
+            #   is on, convert it to an Aleph id via SQL lookup.
+            #---------------------------------------------------------------------
+            $aleph_id = `./sql_lookup.csh '$object_id'`;
+            print STDERR "*** Aleph id from SQL: $aleph_id ***\n" if $debug;
+            $request_uri =~ s/(\/patron\/)\Q$object_id\E/$1$aleph_id/ig;
+        }
+    }
 
-	my $request_uri = $ENV{'REQUEST_URI'};
-	my $response = '';
-	my $aleph_id = '';
-	if ($group eq 'patron' && $id_translation) {
-		if (!$sql_lookup) {
-        		#---------------------------------------------------------------------
-        		#       Incoming identifer requires translation. Since $sql_lookup
-			#	is not set, convert it to an Aleph id via bor-by-key 
-			#	x-server function,
-        		#---------------------------------------------------------------------
-        		my $info_prefix = "op=bor-by-key&bor_id=$patron_id";
-        		my $rest_url    = join '', $x_base_url, $info_prefix;
-        		print STDERR "*** Bor-by-key URL: $rest_url ***\n" if $debug;
-        		$response       = $ua->get($rest_url);
-        		$aleph_id       = &extract_alephid($response);
-        		print STDERR "*** Aleph id: $aleph_id ***\n" if $debug;
-        		print STDERR "*** Patron id: $patron_id ***\n" if $debug;
-        		print STDERR "*** request_uri before: $request_uri ***\n" if $debug;
-        		$request_uri =~ s/$patron_id/$aleph_id/ig;
-        		print STDERR "*** request_uri after: $request_uri ***\n" if $debug;
-        		}
-		else {
-        		#---------------------------------------------------------------------
-        		#       Incoming identifer requires translation. Since $sql_lookup
-			#	is on, convert it to an Aleph id via SQL lookup. 
-        		#---------------------------------------------------------------------
-			$aleph_id = `./sql_lookup.csh $patron_id`;
-			print STDERR "*** Aleph id from SQL: $aleph_id ***\n" if $debug;
-			$request_uri =~ s/$patron_id/$aleph_id/ig;
-			}
-		}
-
-	if (grep /$method/, @allowed_methods) {
-		#-----------------------------------
-		# Optional local programming can be inserted here by uncommenting the 
-		# switch structure below  
-		#-----------------------------------
-		#switch ($category) {
-		#	case ('patroninformation') { 
-		#		# local code here
-		#		}
-		#	case ('patronstatus') { 
-		#		# local code here
-		#		}
-		#	case ('circulationactions') { 
-		#		# local code here
-		#		}
-		#	case ('record') { 
-		#		# local code here
-		#		}
-		#       case ('items') {
-                #               # local code here
-                #               }
-		#	}
-		#-----------------------------------
-		#	Default passthrough.
-		#-----------------------------------
-                my $rest_url = join '', $r_base_url, $request_uri;
-                print STDERR "*** $category: $rest_url ***\n" if $debug;
-                print STDERR "*** Method: $method ***\n" if $debug;
-                my $request;
-                switch ($method) {
-                        case ('get') {
-                                $request = HTTP::Request->new(GET => $rest_url);
-                                }
-                        case ('post') {
-                                read(STDIN, $putdata, $ENV{'CONTENT_LENGTH'});
-                                my $h = HTTP::Headers->new(Content_Type => 'text/xml');
-                                $request = HTTP::Request->new('POST', $rest_url, $h, $putdata);
-                                }
-                        case ('put') {
-                                read(STDIN, $putdata, $ENV{'CONTENT_LENGTH'});
-                                my $h = HTTP::Headers->new(Content_Type => 'text/xml');
-                                $request = HTTP::Request->new('PUT', $rest_url, $h, $putdata);
-                                }
-                        case ('delete') {
-                                $request = HTTP::Request->new(DELETE => $rest_url);
-                                }
-                        }
-                $response = $ua->request($request);
-                $printline = $response->content;
-                #------------------------------------------------------------
-                #       Remove the port number from any URLs in the XML.
-                #------------------------------------------------------------
-                $printline =~ s/localhost:$rest_port/$ENV{'HTTP_HOST'}/go;
-                }
-        else {
-                #------------------------------------------------------------------
-                #       HTTP method is not supported. Return failure message
-                #------------------------------------------------------------------
-                $printline = join '', $xml_prolog, "<note>HTTP command $method is restricted or invalid</note>";
-                }
-	}
+    if (grep /^\Q$method\E$/i, @allowed_methods) {
+        #-----------------------------------
+        #   Optional local programming can be inserted here by uncommenting the
+        #   switch structure below
+        #-----------------------------------
+        #   switch (lc($category)) {
+        #       case ('patroninformation') {
+        #           # local code here
+        #       }
+        #       case ('patronstatus') {
+        #           # local code here
+        #       }
+        #       case ('circulationactions') {
+        #           # local code here
+        #       }
+        #       case ('record') {
+        #           # local code here
+        #       }
+        #       case ('items') {
+        #           # local code here
+        #       }
+        #   }
+        #-----------------------------------
+        #   Default passthrough.
+        #-----------------------------------
+        my $rest_url = join '', $r_base_url, $request_uri;
+        print STDERR "*** $category: $rest_url ***\n" if $debug;
+        print STDERR "*** Method: $method ***\n" if $debug;
+        my $request;
+        switch ($method) {
+            case ('get') {
+                $request = HTTP::Request->new(GET => $rest_url);
+            }
+            case ('post') {
+                read(STDIN, $putdata, $ENV{'CONTENT_LENGTH'});
+                my $h = HTTP::Headers->new(Content_Type => 'text/xml');
+                $request = HTTP::Request->new('POST', $rest_url, $h, $putdata);
+            }
+            case ('put') {
+                read(STDIN, $putdata, $ENV{'CONTENT_LENGTH'});
+                my $h = HTTP::Headers->new(Content_Type => 'text/xml');
+                $request = HTTP::Request->new('PUT', $rest_url, $h, $putdata);
+            }
+            case ('delete') {
+                $request = HTTP::Request->new(DELETE => $rest_url);
+            }
+        }
+        $response = $ua->request($request);
+        $printline = $response->content;
+        #------------------------------------------------------------
+        #   Remove the port number from any URLs in the XML.
+        #------------------------------------------------------------
+        $printline =~ s/localhost:\Q$rest_port\E/$ENV{'HTTP_HOST'}/go;
+    } else {
+        #------------------------------------------------------------------
+        #   HTTP method is not supported. Return failure message
+        #------------------------------------------------------------------
+        $printline = join '', $xml_prolog, "<note>HTTP command $method is restricted or invalid</note>";
+    }
+}
 
 #-----------------------------------------------------------------------------------------
-#	Return the content to the caller.
-#	The following 'if' statement is required to ameliorate the Aleph REST API's 
-#	inexplicable practice of returning HTML in certain error conditions.
+#   Rewrite URL prefix in the response.
+#-----------------------------------------------------------------------------------------
+if (defined($printline)
+        and defined($int_protocol) and defined($int_domain) and defined($int_url_prefix)
+        and defined($ext_protocol) and defined($ext_domain) and defined($ext_url_prefix)) {
+    $printline =~ s/(href=['"])\Q$int_protocol\E(:\/\/)\Q$int_domain\E(\/)\Q$int_url_prefix\E/$1$ext_protocol$2$ext_domain$3$ext_url_prefix/g;
+}
+
+#-----------------------------------------------------------------------------------------
+#   Return the content to the caller.
+#   The following 'if' statement is required to ameliorate the Aleph REST API's
+#   inexplicable practice of returning HTML in certain error conditions.
 #-----------------------------------------------------------------------------------------
 print STDERR "*** printline: $printline ***\n" if $debug;
-if (grep /<html>/, $printline) { print "$html_header" }
-else { print "$xml_header" }
+if (grep /<html>/, $printline) {
+    print "$html_header"
+} else {
+    print "$xml_header"
+}
 print $printline;
 exit;
 
 #------------------------- subroutines --------------------------
 sub extract_alephid {
-        my $xml_ref = pop;
-        my @temp = split '<\/internal\-id>', (split '<internal\-id>', $xml_ref->content)[1];
-        return $temp[0];
-        }
+    my $xml_ref = pop;
+    my @temp = split '<\/internal\-id>', (split '<internal\-id>', $xml_ref->content)[1];
+    return $temp[0];
+}
+
+# vim:textwidth=80:expandtab:tabstop=4:shiftwidth=4:fileencodings=utf8:spelllang=en
